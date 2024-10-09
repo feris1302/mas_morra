@@ -1,0 +1,594 @@
+package aventuraMazmorra;
+
+import java.util.Scanner;
+
+public class Juego {
+
+	private Scanner scanner;
+    private Jugador jugador;
+    private Mazmorra mazmorra;
+
+    public Juego() {
+        scanner = new Scanner(System.in);
+    }
+
+    public void iniciar() {
+        while (true) {
+            mostrarMenu();
+            int opcion = scanner.nextInt();
+            scanner.nextLine(); // Consumir nueva línea
+
+            switch (opcion) {
+                case 1:
+                    iniciarNuevoJuego();
+                    break;
+                case 2:
+                    mostrarInstrucciones();
+                    break;
+                case 3:
+                    System.out.println("¡Gracias por jugar! Salir del juego.");
+                    System.exit(0);
+                default:
+                    System.out.println("Opción no válida. Por favor, intenta de nuevo.");
+            }
+        }
+        
+        
+    }
+
+    private void mostrarMenu() {
+    	
+        System.out.println("Menú Principal:");
+        System.out.println("1. Iniciar nuevo juego");
+        System.out.println("2. Ver instrucciones");
+        System.out.println("3. Salir");
+        System.out.print("Selecciona una opción: ");
+    }
+
+    private void iniciarNuevoJuego() {
+        // Solicitar el nombre del jugador y crear la mazmorra
+        System.out.print("Ingresa el nombre de tu personaje: ");
+        String nombre = scanner.nextLine();
+        jugador = new Jugador(nombre, 100, 10); // Ejemplo de inicialización
+        mazmorra = new Mazmorra(jugador);
+        // Lógica para comenzar el juego en la mazmorra
+        
+        // Comienza a interactuar con la mazmora
+        jugarEnMazmorra(); // Muestra el estado inicial de la mazmora
+    }    
+    
+    private void jugarEnMazmorra() {
+    	  
+    	  
+        // Bucle para permitir que el jugador interactúe con la mazmora
+        while (true) {
+            mazmorra.mostrarEstado(); // Muestra el estado actual de la mazmora
+            System.out.print("Ingresa un comando (w/a/s/d para mover, q para salir): ");
+            String comando = scanner.nextLine();
+
+            if (comando.equalsIgnoreCase("q")) {
+                System.out.println("Saliendo del juego. ¡Hasta luego!");
+                break; // Sale del juego
+                
+            } else {
+                mazmorra.procesarComando(comando);
+            }
+
+            if (jugador.getSalud() <= 0) {
+                jugador.terminarJuego();
+            }
+            }
+    }
+      
+
+    private void mostrarInstrucciones() {
+        System.out.println("Instrucciones del juego:");
+        System.out.println("1. Usa 'w', 'a', 's', 'd' para moverte.");
+        System.out.println("2. Recoge objetos y combate enemigos.");
+        System.out.println("3. Encuentra la salida de la mazmorra para ganar.");
+    }
+
+    public static void main(String[] args) {
+        Juego juego = new Juego();
+        juego.iniciar();
+    }
+}
+
+package aventuraMazmorra;
+
+import java.util.ArrayList;
+
+public class Mazmorra {
+	
+	private Jugador jugador;
+	private ArrayList<Enemigo> enemigos;
+	private ArrayList<Objeto> objetos;
+	private char[][] mapa = new char[10][10];//Mapa
+    private int posX; // Posición X del jugador
+	private int posY; // Posición Y del jugador
+	private int salidaX; // Posición X de la salida
+	private int salidaY; // Posición Y de la salida
+
+    public Mazmorra(Jugador jugador) {
+    	this.jugador = jugador;
+        this.enemigos = new ArrayList<>();
+        this.objetos = new ArrayList<>();
+        
+     // Inicializar el mapa y la posición del jugador
+        inicializarMapa();
+        this.posX = 0; // Ejemplo de posición inicial
+        this.posY = 0;
+        mapa[posX][posY] = 'J'; // 'J' representa al jugador en el mapa
+        
+    
+    }
+    
+   
+    private void inicializarMapa() {
+    	// Definir un patrón de mapa
+        char[][] patronMapa = {
+            {'.', '.', '.', '.', '#', '#', '#', '#', '#', '#'},
+            {'.', '.', '.', '.', '.', '.', '.', '.', '.', '#'},
+            {'.', 'E', '.', '.', '.', '.', '.', '.', '.', '#'},
+            {'.', '.', '.', '.', '#', '.', '.', '.', '.', '#'},
+            {'#', '.', 'O', '#', '#', '#', '.', '.', '.', '#'},
+            {'#', '.', 'E', '.', '#', '.', '.', '.', '.', '#'},
+            {'#', '.', '.', '.', '.', '.', '.', '.', '.', '.'},
+            {'#', '.', '.', '.', 'O', '.', '.', '.', '.', '.'},
+            {'#', '.', '.', 'E', '.', '.', '.', '.', '.', '.'},
+            {'#', '#', '#', '#', '#', '#', '.', '.', '.', 'S'},
+        };
+
+        // Copiar el patrón al mapa
+        for (int i = 0; i < patronMapa.length; i++) {
+            System.arraycopy(patronMapa[i], 0, mapa[i], 0, patronMapa[i].length);
+        }
+        
+        // Establecer la posición de la salida
+        salidaX = 9;
+        salidaY = 9;
+        
+        // Contar enemigos y objetos en el mapa
+        contarEnemigosYObjetos();
+    }
+    private void contarEnemigosYObjetos() {
+        for (int i = 0; i < mapa.length; i++) {
+            for (int j = 0; j < mapa[i].length; j++) {
+                if (mapa[i][j] == 'E') {
+                    enemigos.add(new Enemigo("Enemigo", 50, 1, 10, 5)); // Añadir un enemigo por cada 'E'
+                } else if (mapa[i][j] == 'O') {
+                    objetos.add(new Objeto("Objeto", "pocion", "Recupera salud", 20)); // Añadir un objeto por cada 'O'
+                }
+            }
+        }
+    }
+    
+    public void agregarEnemigo(Enemigo enemigo, int x, int y) {
+    	if (mapa[x][y] == '.') {
+        enemigos.add(enemigo);
+        mapa[x][y] = 'E'; // Representar enemigo en el mapa
+    	}
+    }
+
+    public void agregarObjeto(Objeto objeto, int x, int y) {
+    	if (mapa[x][y] == '.') {
+        objetos.add(objeto);
+        mapa[x][y] = 'O'; // Representar objeto en el mapa
+    	}
+    }
+
+    public void mostrarEstado() {
+        System.out.println("Estado del Jugador: Salud " + jugador.getSalud());
+        System.out.println("Enemigos en la mazmorra:");
+        if (!enemigos.isEmpty()) {
+        for (Enemigo enemigo : enemigos) {
+            System.out.println("- " + enemigo.getNombre() + " (Salud: " + enemigo.getSalud() + ")");
+        }
+        } else {
+            System.out.println("No hay enemigos en la mazmorra.");
+        }
+
+     // Solo mostrar objetos si hay alguno en la lista
+        if (!objetos.isEmpty()) {
+            System.out.println("Objetos en la mazmora:");
+            for (Objeto objeto : objetos) {
+                System.out.println("- " + objeto.getNombre() + " (" + objeto.getTipo() + "): " + objeto.getEfecto());
+            }
+        } else {
+            System.out.println("No hay objetos en la mazmorra.");
+        }
+        jugador.mostrarInventario();
+        mostrarMapa(); 
+    }
+    
+    public void moverJugador(int nuevaX, int nuevaY) {
+        // Validar que la nueva posición esté dentro del mapa
+    	if (nuevaX < 0 || nuevaX >= mapa.length || nuevaY < 0 || nuevaY >= mapa[0].length) {
+    		 System.out.println("Movimiento inválido.");
+    	        return;
+    	    }
+    	
+    	  // Comprobar si el jugador intenta moverse a una pared
+        if (mapa[nuevaX][nuevaY] == '#') {
+            System.out.println("No puedes mover hacia una pared.");
+            return;
+        }
+        // Verificar si hay un objeto en la nueva posición y recogerlo
+        if (mapa[nuevaX][nuevaY] == 'O') {
+            recogerObjeto(nuevaX, nuevaY); // Pasar la posición para recoger el objeto
+        }
+        
+        // Verificar si hay un enemigo en la nueva posición y iniciar combate
+        if (mapa[nuevaX][nuevaY] == 'E') {
+            iniciarCombate(nuevaX, nuevaY);// Pasar las coordenadas del enemigo
+            if (jugador.getSalud() > 0 && mapa[nuevaX][nuevaY] == '.') {
+                // Solo mover al jugador si sobrevive al combate y el enemigo ha sido eliminado
+                mapa[posX][posY] = '.';
+                posX = nuevaX;
+                posY = nuevaY;
+                mapa[posX][posY] = 'J';
+            }
+            return; // Salir del método si hay combate
+        }
+        	
+            // Actualizar el mapa
+            mapa[posX][posY] = '.'; // '.' representa un espacio vacío
+            posX = nuevaX;
+            posY = nuevaY;
+            mapa[posX][posY] = 'J';// Mover al jugador
+            
+            // Verificar si el jugador ha encontrado la salida
+            if (posX == salidaX && posY == salidaY) {
+                System.out.println("¡Has encontrado la salida de la mazmorra! ¡Has ganado!");
+                // Aquí podrías finalizar el juego o volver al menú principal
+                System.exit(0); // Termina la ejecución del programa
+       
+            }
+            
+            // Mostrar el estado después de mover
+            mostrarEstado();
+  
+    }
+
+        
+
+    public void mostrarMapa() {
+        System.out.println("Mapa de la Mazmorra:");
+        for (char[] fila : mapa) {
+            for (char celda : fila) {
+                System.out.print(celda + " ");
+            }
+            System.out.println();
+        }
+    }
+    
+
+    public void procesarComando(String comando) {
+        int nuevaX = posX;
+        int nuevaY = posY;
+
+        switch (comando.toLowerCase()) {
+            case "w":
+                nuevaX--;
+                break;
+            case "s":
+                nuevaX++;
+                break;
+            case "d":
+                nuevaY++;
+                break;
+            case "a":
+                nuevaY--;
+                break;
+            default:
+                System.out.println("Comando no válido.");
+                return;
+        }
+        // Validar el movimiento en un solo lugar
+        moverJugador(nuevaX, nuevaY);
+    }
+
+    private void iniciarCombate(int enemigoX, int enemigoY) {
+    	 // Aquí puedes seleccionar un enemigo e iniciar un combate
+        if (!enemigos.isEmpty()) {
+            Enemigo enemigo = enemigos.get(0); // Ejemplo: luchar con el primer enemigo
+            System.out.println("¡Te encuentras con " + enemigo.getNombre() + "!");
+            
+            while (jugador.getSalud() > 0 && enemigo.getSalud() > 0) {
+                System.out.println(enemigo.getNombre() + " salud: " + enemigo.getSalud());
+                
+             // Turno del jugador
+                jugador.atacar(enemigo); // El jugador ataca al enemigo
+                
+                // Verificar si el enemigo ha caído
+                if (enemigo.getSalud() <= 0) {
+                    System.out.println("¡Has derrotado a " + enemigo.getNombre() + "!");
+                    mapa[enemigoX][enemigoY] = '.'; // Eliminar al enemigo del mapa
+                    enemigos.remove(0);// Actualizar el mapa
+                    return; // Salir del combate
+                }
+
+                // Turno del enemigo
+                enemigo.atacar(jugador);// El enemigo ataca al jugador
+
+            }
+            
+        } else {
+            System.out.println("No hay enemigos en la mazmorra.");
+        
+        }
+        }
+
+    private void recogerObjeto(int x, int y) {
+    	// Comprobar si hay un objeto en la posición actual del jugador
+        if (mapa[x][y] == 'O') {
+        	 // Suponiendo que el objeto a recoger está en la posición especificada
+            for (int i = 0; i < objetos.size(); i++) {
+                Objeto objeto = objetos.get(i);
+             
+                
+                
+                objeto.usar(jugador);
+            
+            // Eliminar el objeto del mapa
+            mapa[x][y] = '.'; // Actualizar el mapa
+            objetos.remove(i); // Eliminar objeto de la lista de objetos
+            break; // Salir del bucle después de recoger un objeto
+        }
+        }
+    }
+
+
+public class Jugador {
+	
+	private String nombre;
+	private int salud;
+    private int ataque;
+    private int defensa;
+    private ArrayList<Objeto> inventario;
+    private int saludMaxima; 
+
+    public Jugador(String nombre, int salud, int ataque) {
+    	this.nombre = nombre; // Inicializar el nombre
+        this.salud = salud;
+        this.ataque = ataque;
+        this.inventario = new ArrayList<>();
+        this.saludMaxima = salud;
+    }
+
+    public void moverse(String direccion) {
+    	
+    }
+    
+    public void agregarObjeto(Objeto objeto) {
+    	this.inventario.add(objeto); // Añadir el objeto al inventario del jugador
+        System.out.println("¡Has recogido " + objeto.getNombre() + "!");
+       
+    }
+    
+    public void usarObjeto(String nombreObjeto) {
+    	 mostrarInventario(); // Mostrar inventario antes de usar el objeto
+    	    for (Objeto objeto : inventario) {
+    	    	 if (objeto.getNombre().equalsIgnoreCase(nombreObjeto)) {
+    	    		
+    	             }
+            }
+        }
+       
+
+    public void atacar(Enemigo enemigo) {
+        enemigo.recibirDano(this.ataque);
+    }
+
+    public void recogerObjeto(ArrayList<Objeto> objetos, char[][] mapa, int posX, int posY) {
+        if (!objetos.isEmpty()) {
+            Objeto objeto = objetos.remove(0); // Eliminar el objeto de la lista
+            this.agregarObjeto(objeto); // Agregar el objeto al inventario del jugador
+            mapa[posX][posY] = '.'; // Eliminar el objeto del mapa
+            System.out.println("¡Has recogido " + objeto.getNombre() + "!");
+            
+            mostrarInventario();
+            
+        } else {
+            System.out.println("No hay objetos para recoger.");
+            
+        }
+    }
+    
+    public void mostrarInventario() {
+        if (inventario.isEmpty()) {
+            System.out.println("Tu inventario está vacío.");
+        } else {
+            System.out.println("Inventario:");
+            for (Objeto objeto : inventario) {
+                System.out.println("- " + objeto);
+            }
+        }
+    }
+    
+    public void recibirDano(int dano) {
+    	 
+        this.salud -= dano;
+        if (this.salud < 0) {
+            this.salud = 0; // Para evitar que la salud sea negativa
+        }
+        
+        System.out.println(nombre + " ha recibido " + dano + "  puntos de daño. Salud actual: " + salud);
+
+        if (this.salud == 0) {
+            System.out.println("Has sido derrotado.");
+            terminarJuego();
+        }
+ 
+    }
+    
+    public void recuperarSalud(int cantidad) {
+    	 System.out.println(nombre + " intentó recuperar " + cantidad + " puntos de salud.");
+    	 this.salud += cantidad; // Aumentar la salud por la cantidad recuperada
+         if (this.salud > saludMaxima) {
+             this.salud = saludMaxima; // Limitar la salud a la máxima
+         }
+         System.out.println(nombre + " ha recuperado " + cantidad + " puntos de salud. Salud actual: " + salud);
+     }
+    
+    public int getAtaque() {
+        return ataque;
+    }
+    
+    public void setAtaque(int ataque) {
+    	 this.ataque = ataque;
+    }
+ 
+
+    public int getDefensa() {
+        return defensa;
+        
+    }
+        
+    public void setDefensa(int defensa) {
+            this.defensa = defensa;
+        
+    }
+
+    public int getSalud() {
+        return salud;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+    
+    public void reducirSalud(int cantidad) {
+        this.salud -= cantidad;
+        if (this.salud < 0) {
+            this.salud = 0;
+        }
+    }
+
+    public ArrayList<Objeto> getInventario() {
+        return inventario;
+    }
+    public int getSaludMaxima() {
+        return saludMaxima;
+    }
+    
+    public void terminarJuego() {
+    	System.out.println("Juego terminado. Gracias por jugar.");
+    	System.exit(0); // Esto termina la ejecución del programa
+    
+    }
+
+    @Override
+    public String toString() {
+        return nombre + " (Salud: " + salud + ", Ataque: " + ataque + ", Defensa: " + defensa + ")";
+    }
+
+
+		
+	}
+
+package aventuraMazmorra;
+
+public class Enemigo {
+	
+	private String nombre;
+	private int nivelDificultad;
+	private int salud;
+    private int ataque;
+    private int defensa;
+
+    public Enemigo(String nombre, int salud, int nivelDificultad, int ataque, int defensa) {
+    	this.nombre = nombre;
+        this.nivelDificultad = nivelDificultad;
+    	this.salud = salud;
+        this.ataque = ataque;
+        this.defensa = defensa;
+    }
+
+    public void atacar(Jugador jugador) {
+        jugador.recibirDano(Math.max(0, this.ataque - jugador.getDefensa()));
+    }
+
+	public void recibirDano(int dano) {
+		 this.salud -= dano;
+	     if (this.salud < 0) {
+	         this.salud = 0; // Evitar salud negativa
+	     }
+		
+	}
+	
+	 public int getSalud() {
+	        return salud;
+	        
+	 }
+	 
+	  public String getNombre() {
+	        return nombre;
+	        
+	  }
+	  
+	  public int getNivelDificultad() {
+	        return nivelDificultad;
+	  }
+}
+
+
+package aventuraMazmorra;
+
+public class Objeto {
+	
+	private String nombre;
+	private String tipo; // "pocion", "arma", "llave", etc.
+    private int valor; // Puede representar salud o daño
+    private String efecto; // Descripción del efecto del objeto
+
+	    public Objeto(String nombre,String tipo, String efecto, int valor) {
+	    	 this.nombre = nombre;
+	         this.tipo = tipo;
+	         this.valor = valor;
+	         this.efecto = efecto;
+	    }
+	    
+	    public String getNombre() {
+	        return nombre;
+	        
+	    }
+	    
+	    public String getTipo() {
+	        return tipo;
+	        
+	    }
+	    
+	    public int getValor() {
+	        return valor;
+	        
+	    }
+	    
+	    public String getEfecto() {
+	        return efecto;
+	        
+	    }
+	    
+
+	    public void usar(Jugador jugador) {
+	    	if ("pocion".equalsIgnoreCase(tipo)) {
+	    		System.out.println("Usando poción: " + nombre);
+	            System.out.println("Salud actual de " + jugador.getNombre() + ": " + jugador.getSalud());
+	            System.out.println("Salud máxima de " + jugador.getNombre() + ": " + jugador.getSaludMaxima());
+	            
+	            if (jugador.getSalud() < jugador.getSaludMaxima()) {
+	                jugador.recuperarSalud(jugador.getSaludMaxima() - jugador.getSalud()); // Recuperar salud al 100%
+	                System.out.println(jugador.getNombre() + " usó " + nombre + " y recuperó su salud al máximo.");
+	            } else {
+	            	// Si la salud ya está al máximo, añadir la poción al inventario
+	                jugador.agregarObjeto(this);
+	                System.out.println(jugador.getNombre() + " ya tiene su salud al máximo. La poción se ha agregado a su inventario.");
+	            }
+	    	}
+	    	
+	        }
+	    public String toString() {
+	    	        return nombre + " (" + tipo + "): " + efecto;
+	    }
+
+}
